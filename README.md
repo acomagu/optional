@@ -1,5 +1,7 @@
 # optional
 
+[![CircleCI](https://img.shields.io/circleci/project/github/acomagu/optional.svg?style=flat-square)](https://circleci.com/gh/acomagu/optional) [GolangCI](https://golangci.com/badges/github.com/acomagu/optional.svg)
+
 The optional type generator for Go.
 
 ## Example
