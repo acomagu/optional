@@ -34,7 +34,7 @@ var (
 )
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: opts <flags> [<directory>]")
+	fmt.Fprintln(os.Stderr, "Usage: optional <flags> [<directory>]")
 	flag.PrintDefaults()
 }
 
