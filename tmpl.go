@@ -39,32 +39,46 @@ type Optional{{.Name}} struct {
 	has bool
 }
 
+{{if .ExportFactory -}}
 func None{{.Name}}() Optional{{.Name}} {
+{{else -}}
+func none{{.Name}}() Optional{{.Name}} {
+{{end -}}
 	return Optional{{.Name}}{}
 }
 
+{{if .ExportFactory -}}
 func Some{{.Name}}(v {{.Type}}) Optional{{.Name}} {
+{{else -}}
+func some{{.Name}}(v {{.Type}}) Optional{{.Name}} {
+{{end -}}
 	return Optional{{.Name}}{
 		v:   v,
 		has: true,
 	}
 }
 
+{{if .ExportGet -}}
 func (o Optional{{.Name}}) Get() ({{.Type}}, bool) {
+{{else -}}
+func (o Optional{{.Name}}) get() ({{.Type}}, bool) {
+{{end -}}
 	return o.v, o.has
 }
 `))
 
 type tmplData struct {
-	Type      string
-	Name      string
-	LowerName string
+	Type          string
+	Name          string
+	LowerName     string
+	ExportFactory bool
+	ExportGet     bool
 }
 
 var typeNameRegexp = regexp.MustCompile(`^\*?\S+$`)
 var optNameRegexp = regexp.MustCompile(`^[A-Z]\S*$`)
 
-func newTmplData(typName, name string) (*tmplData, error) {
+func newTmplData(typName, name string, exportFactory, exportGet bool) (*tmplData, error) {
 	if !typeNameRegexp.MatchString(typName) {
 		return nil, errors.New("invalid type name")
 	}
@@ -76,9 +90,11 @@ func newTmplData(typName, name string) (*tmplData, error) {
 	lowerName := lowerCamelCase(name)
 
 	return &tmplData{
-		Type:      typName,
-		Name:      name,
-		LowerName: lowerName,
+		Type:          typName,
+		Name:          name,
+		LowerName:     lowerName,
+		ExportFactory: exportFactory,
+		ExportGet:     exportGet,
 	}, nil
 }
 
@@ -88,8 +104,8 @@ func lowerCamelCase(s string) string {
 	return strings.Join(es, "")
 }
 
-func writeTmpl(w io.Writer, typName, name string) error {
-	data, err := newTmplData(typName, name)
+func writeTmpl(w io.Writer, typName, name string, exportFactory, exportGet bool) error {
+	data, err := newTmplData(typName, name, exportFactory, exportGet)
 	if err != nil {
 		return err
 	}

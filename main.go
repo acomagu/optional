@@ -26,12 +26,21 @@ func (v *importValue) Set(e string) error {
 }
 
 var (
-	typ    = flag.String("type", "", "type name; must be set")
-	opt    = flag.String("name", "", "option name; if omitted, used type name")
-	output = flag.String("output", "", "output file name; default srcdir/<type>_optional.go")
-	apnd   = flag.Bool("append", false, "append to the output file.")
-	imp    = &importValue{}
+	typ      = flag.String("type", "", "type name; must be set")
+	opt      = flag.String("name", "", "option name; if omitted, used type name")
+	output   = flag.String("output", "", "output file name; default srcdir/<name>_optional.go")
+	apnd     = flag.Bool("append", false, "append to the output file.")
+	imp      = &importValue{}
+	ufactory = new(bool)
+	uget     = new(bool)
 )
+
+func init() {
+	flag.BoolVar(ufactory, "unexport-factory", false, "unexport the factory functions.")
+	flag.BoolVar(ufactory, "f", false, "unexport the factory functions(shorthand).")
+	flag.BoolVar(uget, "unexport-get", false, "unexport get function.")
+	flag.BoolVar(uget, "g", false, "unexport get function(shorthand).")
+}
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "Usage: optional <flags> [<directory>]")
@@ -63,13 +72,13 @@ func main() {
 		*output = fmt.Sprintf("%s_optional.go", strings.ToLower(*opt))
 	}
 
-	if err := run(dir, *apnd, *imp, *typ, *opt, *output); err != nil {
+	if err := run(dir, *apnd, *imp, *typ, *opt, *output, !*ufactory, !*uget); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(dir string, apnd bool, imports []string, typeName, optName, output string) error {
+func run(dir string, apnd bool, imports []string, typeName, optName, output string, exportFactory, exportGet bool) error {
 	pkgName, err := getPkgName(".", dir)
 	if err != nil {
 		return errors.Wrap(err, "could not get the dir's package info")
@@ -81,12 +90,14 @@ func run(dir string, apnd bool, imports []string, typeName, optName, output stri
 	}
 
 	g := &Generator{
-		f:       f,
-		pkgName: pkgName,
-		imports: imports,
-		typName: typeName,
-		optName: optName,
-		append:  apnd,
+		f:             f,
+		pkgName:       pkgName,
+		imports:       imports,
+		typName:       typeName,
+		optName:       optName,
+		append:        apnd,
+		exportFactory: exportFactory,
+		exportGet:     exportGet,
 	}
 
 	if err := g.generate(); err != nil {
@@ -106,12 +117,13 @@ func getPkgName(path, dir string) (string, error) {
 }
 
 type Generator struct {
-	f       *os.File
-	pkgName string
-	imports []string
-	typName string
-	optName string
-	append  bool
+	f                        *os.File
+	pkgName                  string
+	imports                  []string
+	typName                  string
+	optName                  string
+	append                   bool
+	exportFactory, exportGet bool
 }
 
 func (g *Generator) generate() error {
@@ -135,7 +147,7 @@ func (g *Generator) generate() error {
 
 	buf = bytes.NewBufferString(g.addImports(buf.String(), g.imports))
 
-	if err := writeTmpl(buf, g.typName, g.optName); err != nil {
+	if err := writeTmpl(buf, g.typName, g.optName, g.exportFactory, g.exportGet); err != nil {
 		return err
 	}
 
